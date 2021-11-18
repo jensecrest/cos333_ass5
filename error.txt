@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "regserver.py", line 115, in <module>
+    main()
+  File "regserver.py", line 91, in main
+    sock, client_addr = server_sock.accept()
+  File "/opt/anaconda3/lib/python3.8/socket.py", line 292, in accept
+    fd, addr = self._accept()
+KeyboardInterrupt
