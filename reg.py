@@ -114,6 +114,26 @@ def __show_gui(arg, host, port):
     list_widget = QListWidget()
     layout.addWidget(list_widget)
 
+    def __initiate_class_details_query():
+        selected_item = list_widget.selectedItems()[0]
+        class_id = selected_item.data(QtCore.Qt.UserRole)
+
+        try:
+            class_details_response =\
+                __query_server_for_class_details(host, port, class_id)
+        except Exception as ex:
+            QMessageBox.critical(window, 'Server Error', str(ex))
+            return
+
+        if class_details_response[0]:
+            QMessageBox.information(window, 'Class Details',\
+                str(class_details_response[1]))
+        else:
+            QMessageBox.critical(window,\
+                'Error', str(class_details_response[1]))
+    
+    list_widget.itemActivated.connect(__initiate_class_details_query)
+
     # execute initial empty search to get all courses
     __initiate_search_query()
 
@@ -161,24 +181,6 @@ def __create_label(text):
 
 def __create_output(classes, host, port, window, list_widget):
 
-    def __initiate_class_details_query():
-        selected_item = list_widget.selectedItems()[0]
-        class_id = selected_item.data(QtCore.Qt.UserRole)
-
-        try:
-            class_details_response =\
-                __query_server_for_class_details(host, port, class_id)
-        except Exception as ex:
-            QMessageBox.critical(window, 'Server Error', str(ex))
-            return
-
-        if class_details_response[0]:
-            QMessageBox.information(window, 'Class Details',\
-                str(class_details_response[1]))
-        else:
-            QMessageBox.critical(window,\
-                'Error', str(class_details_response[1]))
-
     list_widget.clear()
 
     for i, regclass in enumerate(classes):
@@ -196,7 +198,7 @@ def __create_output(classes, host, port, window, list_widget):
 
         list_widget.insertItem(i, item)
 
-    list_widget.itemActivated.connect(__initiate_class_details_query)
+    list_widget.item(0).setSelected(True)
 
 #-----------------------------------------------------------------------
 

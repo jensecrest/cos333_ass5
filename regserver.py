@@ -99,9 +99,12 @@ def main():
         description="Server for the registrar application")
         parser.add_argument("port", type=int,
         help = "the port at which the server should listen")
+        # parser.add_argument("port", type=int,
+        # help = "the port at which the server should listen")
 
         args = parser.parse_args()
         port = args.port
+        # delay = args.delay
 
         try:
             server_sock = socket()
