@@ -1,8 +1,10 @@
+jsecrest_agc2
+
 Jennifer Secrest, AnneMarie Caballero, Assignment 2
 
 Jennifer Secrest's Contribution:
 
-_______________________________________________________________________
+---
 
 Similar to Assignment 1, we worked on all parts of this assignment
 together. Some work that I specifically contributed was the intial
@@ -15,43 +17,46 @@ along. We created and tested all of the necessary errors together.
 
 AnneMarie Caballero's Contribution:
 
-We pair coded the entire assignment, which means that we both contributed to all
-parts of the assignment. As Jen mentioned, we used Live Share to do this. One part
-I assisted on in particular was modularizing the code and focusing on our style.
-Additionally, I was the one who explicitly coded argparse, although Jen was there
-helping.
+---
 
-We also resolved all pylint warnings together, debugged together, and
-wrote test modules for our code together. In sum, Jen and I
-pair coded everything together, so we were both equally responsible
-for each part of the assignment.
+Similarly to Assignment 1, we pair coded the whole assignment.
+One thing that I contributed a lot to was the initial code
+to create the server, and have it fulfill client requests.
+Additionally, I also worked in particular on the methods 
+for the signals from the widgets. Since we used live share,
+all elements were coded together: either one person was 
+saying ideas, and the other one was coding them, or we 
+were both writing and rewriting code at the same time. 
+As such, any individual element on the assignment is definitely
+a result of both partner's work.
 
 Help received from other people:
 
-We got help at office hours from Anat Kleiman and Joshua
-Gardner. They helped with our understanding of corrupted databases, injection attacks,
-and helped debug an issue with formatting. Any online resources are cited throughout the code.
-In addition to anything cited, we used documents provided on the course page and the print-outs
-given in class.
+We got help at office hours from Anat Kleiman with a style issue:
+ensuring the spacing of our box was correct. She helped us
+switch the style of layout we were using. We receieved advice
+over email from Bob Dondero and we had questions answered on Ed.
+Additionally, any online resources are cited throughout the code.
+Furthermore, we also used documents provided on the course
+page/distributed in class.
 
 Sources of information:
 
 Stated above. Given through the course or cited throughout the code.
 
-Time spent on the assignment: 13-15 hours
+Time spent on the assignment: 13-16 hours
 
 Assessment of assignment:
 
-Jennifer Secrest: I thought that the assignment helped me learn a lot. It was a great introduction
-to database programming, as I felt I got a lot of exposure to this but felt comfortable using
-the syntax from the start after we learned it in lecture. I think the part of the assignment
-that took the longest was getting everything to match between the files (errors, status returns,
-formatting), so most time was spent on those details. Overall, great assignment to expose to python
-and SQL and I learned a lot!
+Jennifer Secrest: Again, we learned a lot through this assignment! I
+became even more comfortable with SQL syntax and enjoyed figuring out
+the GUI formatting. I also didn't know anything about networks before
+this class so became more comfortable with that throughout this
+assignment.
 
-AnneMarie Caballero: I thought this assignment was really helpful. It was a great introduction to
-SQL, and I feel I understand the SELECT command much better now. The part of the assignment that took the
-longest was probably getting started, since this is the first assignment. Overall, I thought it went
-well and was a very informative introduction to both Python and database programming.
+AnneMarie Caballero: I learned a lot throughout this assignment
+especially about network programming. I also learned a lot about GUI,
+but I think that PyQt5/desktop GUI in general is a bit unwieldy
+and I preferred working with the networks.
 
 No known bugs.

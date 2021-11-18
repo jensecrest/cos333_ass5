@@ -1,38 +1,36 @@
 #!/usr/bin/env python
 
-#--------------------------------------------------------------------------------
+#-----------------------------------------------------------------------
 # database.py
 # Authors: Jennifer Secrest and AnneMarie Caballero
-#--------------------------------------------------------------------------------
+#-----------------------------------------------------------------------
 
 """
-TODO: UPDATE ALL COMMENTS. delete when you have.
-
-Implements a command-line argument application that allows user to view
-courses from the registrar's office. Allows for user to print all courses
-when no argument is provided or to search by area, department, title, and
-course number.
+Module on the server side. Contains all code to query database
+and create SQLite statements.
 """
 
-from regclass import RegClass
 from sqlite3 import connect
 from contextlib import closing
-
+from regclass import RegClass
 from regclassdetails import RegClassDetails
 
-#--------------------------------------------------------------------------------
+#-----------------------------------------------------------------------
 
 DATABASE_URL = 'file:reg.sqlite?mode=ro'
 
+#-----------------------------------------------------------------------
+
 def create_condition_and_prepared_values(search):
     """
-    Use the passed-in search to create a specific condition to be attached to the
-    SQL query to ensure the proper query is carried out, and an list of the
-    prepared values to accompany that condition. Returns a tuple with
-    (condition, prepared_values).
+    Use the passed-in search to create a specific condition to be
+    attached to the SQL query to ensure the proper query is carried
+    out, and an list of the prepared values to accompany that condition.
+    Returns a tuple with (condition, prepared_values).
 
     Keyword arguments:
-    search -- a Search object that contains all relevant search fields (e.g. area)
+    search -- a Search object that contains all relevant search fields
+    (e.g. area)
     """
     condition = ""
     escape = r"ESCAPE '\' "
@@ -69,6 +67,8 @@ def create_condition_and_prepared_values(search):
 
     return (condition, prepared_values)
 
+#-----------------------------------------------------------------------
+
 def replace_wildcards_with_escape_chars(text):
     """
     Adds escape character for wildcards (_ or %) to ensure that
@@ -90,15 +90,18 @@ def replace_wildcards_with_escape_chars(text):
 
     return new_text
 
+#-----------------------------------------------------------------------
+
 def get_classes_with_condition(condition, prepared_values):
     """
-    Prepares the SQL Query and prints a table with the correct rows.
+    Prepares the SQL Query for the given condition and prepared
+    values then returns the results as an array of RegClass objects.
 
     Keyword arguments:
     condition -- conditions to be added to the SQL query
     prepared_values -- values that accompany given condition
     """
-    
+
     with connect(DATABASE_URL, uri=True) as connection:
         with closing(connection.cursor()) as cursor:
 
@@ -108,13 +111,15 @@ def get_classes_with_condition(condition, prepared_values):
 
             # prepare query
             stmt_str = "SELECT classes.classid, classes.courseid, "
-            stmt_str += "courses.courseid, courses.area, courses.title, "
-            stmt_str += "crosslistings.courseid, crosslistings.dept, crosslistings.coursenum "
+            stmt_str += "courses.courseid, courses.area, courses.title"
+            stmt_str += ", crosslistings.courseid, crosslistings.dept, "
+            stmt_str += "crosslistings.coursenum "
             stmt_str += "FROM classes, courses, crosslistings "
             stmt_str += "WHERE classes.courseid = courses.courseid "
             stmt_str += "AND courses.courseid = crosslistings.courseid "
             stmt_str += condition + " "
-            stmt_str += "ORDER BY crosslistings.dept, crosslistings.coursenum, classes.classid ASC"
+            stmt_str += "ORDER BY crosslistings.dept, "
+            stmt_str += "crosslistings.coursenum, classes.classid ASC"
 
             # execute query
             if len(prepared_values) == 0:
@@ -127,98 +132,120 @@ def get_classes_with_condition(condition, prepared_values):
             classes = []
 
             while row is not None:
-                # 0 = class id; 1, 2, 5 = course id; 3 = area; 4 = title; 6 = dept; 7 = coursenum
-                classes.append(RegClass(str(row[0]), str(row[6]), str(row[7]), str(row[3]), str(row[4])))
+                # 0 = class id; 1, 2, 5 = course id; 3 = area;
+                # #4 = title; 6 = dept; 7 = coursenum
+                classes.append(RegClass([str(row[0]),\
+                    str(row[6]), str(row[7]), str(row[3]),\
+                    str(row[4])]))
 
                 row = cursor.fetchone()
 
             return classes
 
+#-----------------------------------------------------------------------
+
 def get_class_details(class_id):
+    """
+    Prepares the SQL Query for the given class id
+    then query the database to construct the results as a
+    a RegClassDetails. Returns that RegClassDetails object.
+
+    Keyword arguments:
+    class_id - the id of the class to request the details for
+    """
 
     with connect(DATABASE_URL, uri=True) as connection:
         with closing(connection.cursor()) as cursor:
 
             # query classes variables
-            stmt_str = "SELECT classid, courseid, days, starttime, endtime, bldg, roomnum "
-            stmt_str += "FROM classes WHERE classid = ? "
+            stmt_str = "SELECT classid, courseid, days, starttime, "\
+                + "endtime, bldg, roomnum "\
+                + "FROM classes WHERE classid = ? "
             cursor.execute(stmt_str, [class_id])
 
             classes_row = cursor.fetchone()
 
-            print(classes_row)
-            print(class_id)
-
             if classes_row is None:
-                raise ValueError("no class with class id " + str(class_id) + " exists")
+                raise ValueError("no class with class id " +\
+                                str(class_id) + " exists")
 
+            class_details = []
+
+            # course id
             course_id = str(classes_row[1])
-            days = str(classes_row[2])
-            start_time = str(classes_row[3])
-            end_time = str(classes_row[4])
-            building = str(classes_row[5])
-            room_num = str(classes_row[6])
+            class_details.append(course_id)
+            # days
+            class_details.append(str(classes_row[2]))
+            # starttime
+            class_details.append(str(classes_row[3]))
+            # endtime
+            class_details.append(str(classes_row[4]))
+            # bldg
+            class_details.append(str(classes_row[5]))
+            # roomnum
+            class_details.append(str(classes_row[6]))
 
             # crosslisting variables
-            stmt_str = "SELECT courseid, dept, coursenum "
-            stmt_str += "FROM crosslistings WHERE crosslistings.courseid = ? "
-            stmt_str += "ORDER BY dept, coursenum ASC"
-            
+            stmt_str = "SELECT courseid, dept, coursenum "\
+                + "FROM crosslistings WHERE "\
+                + "crosslistings.courseid = ? "\
+                + "ORDER BY dept, coursenum ASC"
+
             cursor.execute(stmt_str, [course_id])
 
             cl_row = cursor.fetchone()
-            print(cl_row)
-            
+
+            cl_details = []
+
             depts = []
             course_nums = []
-            
+
             while cl_row is not None:
                 depts.append(str(cl_row[1]))
                 course_nums.append(str(cl_row[2]))
 
                 cl_row = cursor.fetchone()
 
+            cl_details = [depts, course_nums]
+
             # courses variables
 
-            stmt_str = "SELECT courseid, area, title, descrip, prereqs "
-            stmt_str += "FROM courses WHERE courseid = ? "
+            stmt_str = "SELECT courseid, area, title, descrip, "\
+                + "prereqs FROM courses WHERE courseid = ? "
 
             cursor.execute(stmt_str, [course_id])
             courses_row = cursor.fetchone()
 
-            print(courses_row)
+            courses_details = []
 
-            area = str(courses_row[1])
-            title = str(courses_row[2])
-            descrip = str(courses_row[3])
-            prereqs = str(courses_row[4])
-
-            print('area: ', area)
-            print('title: ', title)
-            print('descrip: ', descrip)
-            print('prereqs: ', prereqs)
+            # area
+            courses_details.append(str(courses_row[1]))
+            #title
+            courses_details.append(str(courses_row[2]))
+            # descrip
+            courses_details.append(str(courses_row[3]))
+            # prereqs
+            courses_details.append(str(courses_row[4]))
 
             # professor variables
 
-            stmt_str = "SELECT coursesprofs.courseid, coursesprofs.profid, "
-            stmt_str += "profs.profid, profs.profname "
-            stmt_str += "FROM coursesprofs, profs WHERE coursesprofs.courseid = ? "
-            stmt_str += "AND profs.profid = coursesprofs.profid "
-            stmt_str += "ORDER BY profs.profname ASC"
+            stmt_str = "SELECT coursesprofs.courseid, "\
+                + "coursesprofs.profid, "\
+                + "profs.profid, profs.profname "\
+                + "FROM coursesprofs, profs WHERE "\
+                + "coursesprofs.courseid = ? "\
+                + "AND profs.profid = coursesprofs.profid "\
+                + "ORDER BY profs.profname ASC"
 
             cursor.execute(stmt_str, [course_id])
             prof_row = cursor.fetchone()
 
-            print(prof_row)
-            
             prof_names = []
 
             while prof_row is not None:
                 prof_names.append(prof_row[3])
-                
-                prof_row = cursor.fetchone()
-            
-            print(prof_names)
 
-            return RegClassDetails(course_id, days, start_time, end_time, building,
-                room_num, depts, course_nums, area, title, descrip, prereqs, prof_names)
+                prof_row = cursor.fetchone()
+
+            return RegClassDetails(class_details, cl_details,
+                courses_details, prof_names)
