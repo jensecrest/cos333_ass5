@@ -101,8 +101,11 @@ def __show_gui(arg, host, port):
     def __initiate_search_query():
         nonlocal worker_thread
 
+        search = Search(dept.text(), num.text(), area.text(),\
+            title.text())
+
         __initiate_search_query_helper(worker_thread, host, port,\
-            dept, num, area, title, queue)
+            search, queue)
 
     dept.textChanged.connect(__initiate_search_query)
     num.textChanged.connect(__initiate_search_query)
@@ -264,7 +267,7 @@ def __poll_queue_helper(queue, window, list_widget):
 
         if process_successful:
             query_successful, query_data = process_data
-            
+
             if query_successful:
                 __populate_list_with_classes(query_data, list_widget)
             else:
@@ -278,15 +281,8 @@ def __poll_queue_helper(queue, window, list_widget):
 
 #-----------------------------------------------------------------------
 
-def __initiate_search_query_helper(worker_thread, host, port, dept,\
-    num, area, title, queue):
-    dept_text = dept.text()
-    num_text = num.text()
-    area_text = area.text()
-    title_text = title.text()
-
-    search = Search(dept_text, num_text, area_text, title_text)
-
+def __initiate_search_query_helper(worker_thread, host, port, search,\
+    queue):
     if worker_thread is not None:
         worker_thread.stop()
     worker_thread = WorkerThread(host, port, search, queue)
