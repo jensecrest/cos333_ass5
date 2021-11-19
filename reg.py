@@ -89,7 +89,7 @@ def __show_gui(arg, host, port):
     queue = SafeQueue()
 
     def poll_queue():
-        poll_queue_helper(queue, window, list_widget)
+        __poll_queue_helper(queue, window, list_widget)
 
     timer = QTimer()
     timer.timeout.connect(poll_queue)
@@ -280,38 +280,38 @@ def __poll_queue_helper(queue, window, list_widget):
 
 def __initiate_search_query_helper(worker_thread, host, port, dept,\
     num, area, title, queue):
-        dept_text = dept.text()
-        num_text = num.text()
-        area_text = area.text()
-        title_text = title.text()
+    dept_text = dept.text()
+    num_text = num.text()
+    area_text = area.text()
+    title_text = title.text()
 
-        search = Search(dept_text, num_text, area_text, title_text),
+    search = Search(dept_text, num_text, area_text, title_text)
 
-        if worker_thread is not None:
-            worker_thread.stop()
-        worker_thread = WorkerThread(host, port, search, queue)
-        worker_thread.start()
+    if worker_thread is not None:
+        worker_thread.stop()
+    worker_thread = WorkerThread(host, port, search, queue)
+    worker_thread.start()
 
 #-----------------------------------------------------------------------
 
 def __initiate_class_details_query_helper(host, port, window,\
     list_widget):
-        selected_item = list_widget.selectedItems()[0]
-        class_id = selected_item.data(QtCore.Qt.UserRole)
+    selected_item = list_widget.selectedItems()[0]
+    class_id = selected_item.data(QtCore.Qt.UserRole)
 
-        try:
-            successful, data =\
-                __query_server_for_class_details(host, port, class_id)
-        except Exception as ex:
-            QMessageBox.critical(window, 'Server Error', str(ex))
-            return
+    try:
+        successful, data =\
+            __query_server_for_class_details(host, port, class_id)
+    except Exception as ex:
+        QMessageBox.critical(window, 'Server Error', str(ex))
+        return
 
-        if successful:
-            QMessageBox.information(window, 'Class Details',\
-                str(data))
-        else:
-            QMessageBox.critical(window,\
-                'Error', str(data))
+    if successful:
+        QMessageBox.information(window, 'Class Details',\
+            str(data))
+    else:
+        QMessageBox.critical(window,\
+            'Error', str(data))
 
 #-----------------------------------------------------------------------
 if __name__ == '__main__':
