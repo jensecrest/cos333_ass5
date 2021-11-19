@@ -14,18 +14,18 @@ to see and search classes, and also display class details.
 
 import argparse
 import sys
+from pickle import dump, load
 from sys import argv, stderr
 from socket import socket
-from pickle import dump, load
+from search import Search
+from threading import Thread
+from safequeue import SafeQueue
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QLineEdit, QLabel, QFrame,\
     QGridLayout, QVBoxLayout, QMainWindow, QMessageBox, QDesktopWidget,\
     QListWidget, QListWidgetItem
-from search import Search
-from threading import Thread
-from safequeue import SafeQueue
 
 #-----------------------------------------------------------------------
 
@@ -101,20 +101,8 @@ def __show_gui(arg, host, port):
     def __initiate_search_query():
         nonlocal worker_thread
 
-        dept_text = dept.text()
-        num_text = num.text()
-        area_text = area.text()
-        title_text = title.text()
-
-        try:
-            if worker_thread is not None:
-                worker_thread.stop()
-            worker_thread = WorkerThread(host, port, Search(dept_text,\
-                num_text, area_text, title_text), queue)
-            worker_thread.start()
-        except Exception as ex:
-            QMessageBox.critical(window, 'Server Error', str(ex))
-            return
+        __initiate_search_query_helper(worker_thread, host, port,\
+            dept, num, area, title, queue)
 
     dept.textChanged.connect(__initiate_search_query)
     num.textChanged.connect(__initiate_search_query)
@@ -122,23 +110,9 @@ def __show_gui(arg, host, port):
     title.textChanged.connect(__initiate_search_query)
 
     def __initiate_class_details_query():
-        selected_item = list_widget.selectedItems()[0]
-        class_id = selected_item.data(QtCore.Qt.UserRole)
+        __initiate_class_details_query_helper(host, port, window,\
+            list_widget)
 
-        try:
-            successful, data =\
-                __query_server_for_class_details(host, port, class_id)
-        except Exception as ex:
-            QMessageBox.critical(window, 'Server Error', str(ex))
-            return
-
-        if successful:
-            QMessageBox.information(window, 'Class Details',\
-                str(data))
-        else:
-            QMessageBox.critical(window,\
-                'Error', str(data))
-    
     list_widget.itemActivated.connect(__initiate_class_details_query)
 
     # Set layout and frame
@@ -194,7 +168,7 @@ def __create_label(text):
 
 #-----------------------------------------------------------------------
 
-def __create_output(classes, list_widget):
+def __populate_list_with_classes(classes, list_widget):
 
     list_widget.clear()
 
@@ -255,7 +229,7 @@ class WorkerThread (Thread):
         self._should_stop = False
 
     def stop(self):
-        self._should_stop = True       
+        self._should_stop = True
 
     def run(self):
         print('Sent command: get_overviews')
@@ -277,34 +251,68 @@ class WorkerThread (Thread):
                 self._queue.put((True, (query_successful, data)))
         except Exception as ex:
             if not self._should_stop:
-                print('this happened: ' + str(ex))
                 self._queue.put((False, ex))
 
 #-----------------------------------------------------------------------
 
-def poll_queue_helper(queue, window, list_widget):
+def __poll_queue_helper(queue, window, list_widget):
 
     classes_response = queue.get()
 
     while classes_response is not None:
-        successful, data = classes_response
+        process_successful, process_data = classes_response
 
-        if successful:
-            query_successful, query_data = data
+        if process_successful:
+            query_successful, query_data = process_data
             
             if query_successful:
-                __create_output(query_data, list_widget)
+                __populate_list_with_classes(query_data, list_widget)
             else:
                 QMessageBox.critical(window, 'Error',
                     str(query_data))
         else:
-            #TODO: what should happen if the queue should stop??
-            QMessageBox.critical(window, 'Error',
-                    str(data))
+            QMessageBox.critical(window, 'Server Error',\
+                str(process_data))
 
         classes_response = queue.get()
 
 #-----------------------------------------------------------------------
 
+def __initiate_search_query_helper(worker_thread, host, port, dept,\
+    num, area, title, queue):
+        dept_text = dept.text()
+        num_text = num.text()
+        area_text = area.text()
+        title_text = title.text()
+
+        search = Search(dept_text, num_text, area_text, title_text),
+
+        if worker_thread is not None:
+            worker_thread.stop()
+        worker_thread = WorkerThread(host, port, search, queue)
+        worker_thread.start()
+
+#-----------------------------------------------------------------------
+
+def __initiate_class_details_query_helper(host, port, window,\
+    list_widget):
+        selected_item = list_widget.selectedItems()[0]
+        class_id = selected_item.data(QtCore.Qt.UserRole)
+
+        try:
+            successful, data =\
+                __query_server_for_class_details(host, port, class_id)
+        except Exception as ex:
+            QMessageBox.critical(window, 'Server Error', str(ex))
+            return
+
+        if successful:
+            QMessageBox.information(window, 'Class Details',\
+                str(data))
+        else:
+            QMessageBox.critical(window,\
+                'Error', str(data))
+
+#-----------------------------------------------------------------------
 if __name__ == '__main__':
     main()

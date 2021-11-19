@@ -19,11 +19,11 @@ import sys
 from sys import stderr, argv
 from os import name
 from socket import socket, SOL_SOCKET, SO_REUSEADDR
+from multiprocessing import Process
 from pickle import load, dump
+from time import process_time
 from database import create_condition_and_prepared_values,\
     get_class_details, get_classes_with_condition
-from multiprocessing import Process, cpu_count
-from time import process_time
 
 DATABASE_URL = 'file:reg.sqlite?mode=ro'
 
@@ -146,7 +146,7 @@ def main():
             print('Listening')
             while True:
                 try:
-                    sock, client_addr = server_sock.accept()
+                    sock = server_sock.accept()
                     with sock:
                         print('Accepted connection, opened socket')
 
