@@ -56,7 +56,7 @@ def handle_client(sock, delay):
     """
 
     print('Forked child process')
-    
+
     try:
         read_flo = sock.makefile(mode='rb')
         request_type_is_search = load(read_flo)
@@ -144,9 +144,10 @@ def main():
             print('Bound server socket to port')
             server_sock.listen()
             print('Listening')
+
             while True:
                 try:
-                    sock = server_sock.accept()
+                    sock, address = server_sock.accept()
                     with sock:
                         print('Accepted connection, opened socket')
 
