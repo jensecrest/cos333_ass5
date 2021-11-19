@@ -82,7 +82,7 @@ def __show_gui(arg, host, port):
 
     # Set event listeners
 
-    queue = __set_up_queue_and_timer()
+    queue = __set_up_queue_and_timer(window, list_widget)
 
     worker_thread = None
 
@@ -106,18 +106,7 @@ def __show_gui(arg, host, port):
 
     list_widget.itemActivated.connect(__initiate_class_details_query)
 
-    # Set layout and frame
-    frame = QFrame()
-
-    layout = QVBoxLayout()
-
-    layout.setSpacing(0)
-    layout.setContentsMargins(0, 0, 0, 0)
-    layout.addWidget(__create_inputs(dept, num, area, title))
-    layout.addWidget(list_widget)
-
-    frame.setLayout(layout)
-    window.setCentralWidget(frame)
+    __set_up_layout(window, dept, num, area, title, list_widget)    
 
     window.show()
 
@@ -166,6 +155,21 @@ def __set_up_queue_and_timer(window, list_widget):
     timer.start()
 
     return queue
+
+#-----------------------------------------------------------------------
+
+def __set_up_layout(window, dept, num, area, title, list_widget):
+    frame = QFrame()
+
+    layout = QVBoxLayout()
+
+    layout.setSpacing(0)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.addWidget(__create_inputs(dept, num, area, title))
+    layout.addWidget(list_widget)
+
+    frame.setLayout(layout)
+    window.setCentralWidget(frame)
 
 #-----------------------------------------------------------------------
 
