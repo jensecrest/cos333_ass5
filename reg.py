@@ -69,9 +69,7 @@ def __show_gui(arg, host, port):
     app = QApplication(arg)
 
     window = QMainWindow()
-    window.setWindowTitle('Princeton University Class Search')
-    screen_size = QDesktopWidget().screenGeometry()
-    window.resize(screen_size.width()//2, screen_size.height()//2)
+    __set_window_properties(window)
 
     # Create widgets
 
@@ -84,17 +82,7 @@ def __show_gui(arg, host, port):
 
     # Set event listeners
 
-    # Create a queue and a timer that polls it.
-
-    queue = SafeQueue()
-
-    def poll_queue():
-        __poll_queue_helper(queue, window, list_widget)
-
-    timer = QTimer()
-    timer.timeout.connect(poll_queue)
-    timer.setInterval(100) # milliseconds
-    timer.start()
+    queue = __set_up_queue_and_timer()
 
     worker_thread = None
 
@@ -137,6 +125,47 @@ def __show_gui(arg, host, port):
     __initiate_search_query()
 
     sys.exit(app.exec_())
+
+#-----------------------------------------------------------------------
+
+def __set_window_properties(window):
+    window.setWindowTitle('Princeton University Class Search')
+    screen_size = QDesktopWidget().screenGeometry()
+    window.resize(screen_size.width()//2, screen_size.height()//2)
+
+#-----------------------------------------------------------------------
+
+def __set_up_queue_and_timer(window, list_widget):
+
+    queue = SafeQueue()
+
+    def poll_queue():
+        classes_response = queue.get()
+
+        while classes_response is not None:
+            process_successful, process_data = classes_response
+
+            if process_successful:
+                query_successful, query_data = process_data
+
+                if query_successful:
+                    __populate_list_with_classes(query_data,\
+                        list_widget)
+                else:
+                    QMessageBox.critical(window, 'Error',
+                        str(query_data))
+            else:
+                QMessageBox.critical(window, 'Server Error',\
+                    str(process_data))
+
+            classes_response = queue.get()
+
+    timer = QTimer()
+    timer.timeout.connect(poll_queue)
+    timer.setInterval(100) # milliseconds
+    timer.start()
+
+    return queue
 
 #-----------------------------------------------------------------------
 
@@ -255,29 +284,6 @@ class WorkerThread (Thread):
         except Exception as ex:
             if not self._should_stop:
                 self._queue.put((False, ex))
-
-#-----------------------------------------------------------------------
-
-def __poll_queue_helper(queue, window, list_widget):
-
-    classes_response = queue.get()
-
-    while classes_response is not None:
-        process_successful, process_data = classes_response
-
-        if process_successful:
-            query_successful, query_data = process_data
-
-            if query_successful:
-                __populate_list_with_classes(query_data, list_widget)
-            else:
-                QMessageBox.critical(window, 'Error',
-                    str(query_data))
-        else:
-            QMessageBox.critical(window, 'Server Error',\
-                str(process_data))
-
-        classes_response = queue.get()
 
 #-----------------------------------------------------------------------
 

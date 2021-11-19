@@ -147,9 +147,10 @@ def main():
 
             while True:
                 try:
-                    sock = server_sock.accept()
+                    sock, address = server_sock.accept()
                     with sock:
-                        print('Accepted connection, opened socket')
+                        print('Accepted connection, opened socket for '\
+                            + str(address))
 
                         process = Process(target=handle_client,
                             args=[sock, delay])
