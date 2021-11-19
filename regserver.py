@@ -147,7 +147,7 @@ def main():
 
             while True:
                 try:
-                    sock, address = server_sock.accept()
+                    sock = server_sock.accept()
                     with sock:
                         print('Accepted connection, opened socket')
 
