@@ -82,7 +82,8 @@ def __show_gui(arg, host, port):
 
     # Set event listeners
 
-    queue = __set_up_queue_and_timer(window, list_widget)
+    queue, timer= __set_up_queue_and_timer(window, list_widget)
+    timer.start()
 
     worker_thread = None
 
@@ -151,11 +152,12 @@ def __set_up_queue_and_timer(window, list_widget):
             classes_response = queue.get()
 
     timer = QTimer()
+
     timer.timeout.connect(poll_queue)
     timer.setInterval(100) # milliseconds
     timer.start()
 
-    return queue
+    return queue, timer
 
 #-----------------------------------------------------------------------
 
