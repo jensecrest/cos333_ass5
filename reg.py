@@ -20,10 +20,10 @@ from pickle import dump, load
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QApplication, QLineEdit, QLabel, QFrame,\
-    QGridLayout, QVBoxLayout, QMainWindow, QMessageBox, QPushButton,\
+    QGridLayout, QVBoxLayout, QMainWindow, QMessageBox,\
     QDesktopWidget, QListWidget, QListWidgetItem
 from search import Search
-
+from threading import Thread
 
 #-----------------------------------------------------------------------
 
@@ -76,15 +76,30 @@ def __show_gui(arg, host, port):
     area = QLineEdit()
     title = QLineEdit()
 
+    
+    
+    #     author = author_lineedit.text()
+    #     if worker_thread is not None:
+    #         worker_thread.stop()
+    #     worker_thread = WorkerThread(host, port, author, queue)
+    #     worker_thread.start()
+
+    worker_thread = None
     def __initiate_search_query():
+        nonlocal worker_thread
+
         dept_text = dept.text()
         num_text = num.text()
         area_text = area.text()
         title_text = title.text()
 
         try:
-            classes_response = __query_server_for_search(host, port,
-                Search(dept_text, num_text, area_text, title_text))
+
+            if worker_thread is not None:
+                worker_thread.stop()
+            worker_thread = WorkerThread(host, port, search, queue)
+            worker_thread.start()
+
         except Exception as ex:
             QMessageBox.critical(window, 'Server Error', str(ex))
             return
@@ -96,20 +111,16 @@ def __show_gui(arg, host, port):
             QMessageBox.critical(window, 'Error',
                 str(classes_response[1]))
 
-    dept.returnPressed.connect(__initiate_search_query)
-    num.returnPressed.connect(__initiate_search_query)
-    area.returnPressed.connect(__initiate_search_query)
-    title.returnPressed.connect(__initiate_search_query)
-
-    submit_button = QPushButton('Submit')
-    submit_button.clicked.connect(__initiate_search_query)
+    dept.textChanged.connect(__initiate_search_query)
+    num.textChanged.connect(__initiate_search_query)
+    area.textChanged.connect(__initiate_search_query)
+    title.textChanged.connect(__initiate_search_query)
 
     layout = QVBoxLayout()
 
     layout.setSpacing(0)
     layout.setContentsMargins(0, 0, 0, 0)
-    layout.addWidget(__create_inputs(submit_button, dept, num, area,\
-        title))
+    layout.addWidget(__create_inputs(dept, num, area, title))
 
     list_widget = QListWidget()
     layout.addWidget(list_widget)
@@ -134,19 +145,20 @@ def __show_gui(arg, host, port):
     
     list_widget.itemActivated.connect(__initiate_class_details_query)
 
-    # execute initial empty search to get all courses
-    __initiate_search_query()
-
     frame = QFrame()
     frame.setLayout(layout)
     window.setCentralWidget(frame)
 
     window.show()
+
+    # execute initial empty search to get all courses
+    __initiate_search_query()
+
     sys.exit(app.exec_())
 
 #-----------------------------------------------------------------------
 
-def __create_inputs(submit_button, dept, num, area, title):
+def __create_inputs(dept, num, area, title):
     grid_layout = QGridLayout()
 
     grid_layout.addWidget(__create_label('Dept: '), 0, 0) #Dept
@@ -158,8 +170,6 @@ def __create_inputs(submit_button, dept, num, area, title):
     grid_layout.addWidget(num, 1, 1) #Number
     grid_layout.addWidget(area, 2, 1) #Area
     grid_layout.addWidget(title, 3, 1) #Title
-
-    grid_layout.addWidget(submit_button, 0, 2, 4, 1)
 
     grid_frame = QFrame()
     grid_frame.setLayout(grid_layout)
@@ -199,6 +209,53 @@ def __create_output(classes, host, port, window, list_widget):
         list_widget.insertItem(i, item)
 
     list_widget.item(0).setSelected(True)
+
+#-----------------------------------------------------------------------
+
+class WorkerThread (Thread):
+
+    def __init__(self, host, port, search, queue):
+        Thread.__init__(self)
+        self._host = host
+        self._port = port
+        self._search = search
+        self._queue = queue
+        self._should_stop = False
+
+    def stop(self):
+        self._should_stop = True
+
+    def run(self):
+        try:
+            classes_response = __query_server_for_search(self._host, self._port, self._search)
+
+            if not self._should_stop:
+                self._queue.put((True, classes_response))
+        except Exception as ex:
+            if not self._should_stop:
+                self._queue.put((False, ex))
+
+#-----------------------------------------------------------------------
+
+def poll_queue_helper(queue, books_textedit):
+
+    item = queue.get()
+    while item is not None:
+        books_textedit.clear()
+        successful, data = item
+        if successful:
+            books = data
+            if len(books) == 0:
+                books_textedit.insertPlainText('(None)')
+            else:
+                pattern = '<strong>%s</strong>: %s ($%.2f)<br>'
+                for book in books:
+                    books_textedit.insertHtml(pattern % book.to_tuple())
+        else:
+            ex = data
+            books_textedit.insertPlainText(str(ex))
+        books_textedit.repaint()
+        item = queue.get()
 
 #-----------------------------------------------------------------------
 

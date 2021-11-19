@@ -22,12 +22,24 @@ from socket import socket, SOL_SOCKET, SO_REUSEADDR
 from pickle import load, dump
 from database import create_condition_and_prepared_values,\
     get_class_details, get_classes_with_condition
+from multiprocessing import Process, cpu_count
+from time import process_time
 
 DATABASE_URL = 'file:reg.sqlite?mode=ro'
 
 #-----------------------------------------------------------------------
 
-def handle_client(sock):
+# taken from class pennyserver.py
+def __consume_cpu_time(delay):
+
+    i = 0
+    initial_time = process_time()
+    while (process_time() - initial_time) < delay:
+        i += 1  # Do a nonsensical computation.
+
+#-----------------------------------------------------------------------
+
+def handle_client(sock, delay):
     """
     Handles a request from the client for either a class list
     or class details by reading in the request information
@@ -42,16 +54,21 @@ def handle_client(sock):
     Keyword arguments:
         sock -- the socket to be reading and writing information to
     """
-    read_flo = sock.makefile(mode='rb')
-    request_type_is_search = load(read_flo)
-    data = load(read_flo)
-
-    response = None
-    write_flo = sock.makefile(mode='wb')
-
+    
     try:
+        read_flo = sock.makefile(mode='rb')
+        request_type_is_search = load(read_flo)
+        data = load(read_flo)
+
+        response = None
+        write_flo = sock.makefile(mode='wb')
+
+    # try:
         if request_type_is_search:
             print('Read search from client: ' + str(data))
+
+            # Consume delay seconds of CPU time.
+            __consume_cpu_time(delay)
 
             # if we're executing a search then data will be a Search
             db_values = create_condition_and_prepared_values(data)
@@ -62,6 +79,9 @@ def handle_client(sock):
         else:
             print('Read class details request from client: ' +\
                 str(data))
+
+            # Consume delay seconds of CPU time.
+            __consume_cpu_time(delay)
 
             # if we're getting class details,
             # data will be the class id as a string
@@ -99,12 +119,12 @@ def main():
         description="Server for the registrar application")
         parser.add_argument("port", type=int,
         help = "the port at which the server should listen")
-        # parser.add_argument("port", type=int,
-        # help = "the port at which the server should listen")
+        parser.add_argument("delay", type=int,
+        help = "the number of seconds that the server should delay before responding to each client request")
 
         args = parser.parse_args()
         port = args.port
-        # delay = args.delay
+        delay = args.delay
 
         try:
             server_sock = socket()
@@ -125,7 +145,9 @@ def main():
                             str(client_addr))
                         print('Opened socket for ' + str(client_addr))
 
-                        handle_client(sock)
+                        process = Process(target=handle_client,
+                            args=[sock, delay])
+                        process.start()
 
                     print('Closed socket')
                 except Exception as ex:
