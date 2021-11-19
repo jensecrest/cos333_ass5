@@ -18,13 +18,13 @@ from pickle import dump, load
 from sys import argv, stderr
 from socket import socket
 from threading import Thread
-from safequeue import SafeQueue
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QLineEdit, QLabel, QFrame,\
     QGridLayout, QVBoxLayout, QMainWindow, QMessageBox, QDesktopWidget,\
     QListWidget, QListWidgetItem
+from safequeue import SafeQueue
 from search import Search
 
 #-----------------------------------------------------------------------
