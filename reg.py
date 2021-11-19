@@ -213,11 +213,15 @@ def __create_output(classes, list_widget):
 
         list_widget.insertItem(i, item)
 
-    list_widget.item(0).setSelected(True)
+    first_item = list_widget.item(0)
+    if first_item is not None:
+        first_item.setSelected(True)
 
 #-----------------------------------------------------------------------
 
 def __query_server_for_class_details(host, port, class_id):
+    print('Sent command: get_details')
+
     with socket() as sock:
         sock.connect((host, port))
 
@@ -226,7 +230,6 @@ def __query_server_for_class_details(host, port, class_id):
         dump(False, write_flo)
         dump(class_id, write_flo)
         write_flo.flush()
-        print('Sent class id to server')
 
         read_flo = sock.makefile(mode='rb')
 
@@ -234,10 +237,8 @@ def __query_server_for_class_details(host, port, class_id):
 
         if query_successful:
             details = load(read_flo)
-            print('Received details from the server')
             return (True, details)
 
-        print('Received exception message from server')
         ex_message = load(read_flo)
         return (False, ex_message)
 
@@ -257,6 +258,8 @@ class WorkerThread (Thread):
         self._should_stop = True       
 
     def run(self):
+        print('Sent command: get_overviews')
+
         try:
             with socket() as sock:
                 sock.connect((self._host, self._port))
@@ -265,16 +268,10 @@ class WorkerThread (Thread):
                 dump(True, write_flo)
                 dump(self._search, write_flo)
                 write_flo.flush()
-                print('Sent search to server')
 
                 read_flo = sock.makefile(mode='rb')
                 query_successful = load(read_flo)
                 data = load(read_flo)
-
-                if query_successful:
-                    print('Received classes from the server')
-                else:
-                    print('Received exception from the server')
 
             if not self._should_stop:
                 self._queue.put((True, (query_successful, data)))

@@ -54,6 +54,8 @@ def handle_client(sock, delay):
     Keyword arguments:
         sock -- the socket to be reading and writing information to
     """
+
+    print('Forked child process')
     
     try:
         read_flo = sock.makefile(mode='rb')
@@ -61,11 +63,9 @@ def handle_client(sock, delay):
         data = load(read_flo)
 
         response = None
-        write_flo = sock.makefile(mode='wb')
 
-    # try:
         if request_type_is_search:
-            print('Read search from client: ' + str(data))
+            print('Received command: get_overviews')
 
             # Consume delay seconds of CPU time.
             __consume_cpu_time(delay)
@@ -77,8 +77,7 @@ def handle_client(sock, delay):
 
         # if it's not a search, then it's a request for class details
         else:
-            print('Read class details request from client: ' +\
-                str(data))
+            print('Received command: get_detail')
 
             # Consume delay seconds of CPU time.
             __consume_cpu_time(delay)
@@ -87,8 +86,15 @@ def handle_client(sock, delay):
             # data will be the class id as a string
             response = get_class_details(data)
 
+        write_flo = sock.makefile(mode='wb')
         dump(True, write_flo) # query succeeded!
         dump(response, write_flo)
+
+        write_flo.flush()
+        sock.close()
+
+        print ('Closed socket in child process')
+        print ('Exiting child process')
 
     except ValueError as ex:
         print(str(ex), file=stderr)
@@ -120,7 +126,8 @@ def main():
         parser.add_argument("port", type=int,
         help = "the port at which the server should listen")
         parser.add_argument("delay", type=int,
-        help = "the number of seconds that the server should delay before responding to each client request")
+        help = "the number of seconds that the server should\
+            delay before responding to each client request")
 
         args = parser.parse_args()
         port = args.port
@@ -141,15 +148,14 @@ def main():
                 try:
                     sock, client_addr = server_sock.accept()
                     with sock:
-                        print('Accepted connection for ' +\
-                            str(client_addr))
-                        print('Opened socket for ' + str(client_addr))
+                        print('Accepted connection, opened socket')
 
                         process = Process(target=handle_client,
                             args=[sock, delay])
                         process.start()
 
-                    print('Closed socket')
+                    print('Closed socket in parent process')
+
                 except Exception as ex:
                     print(ex, file=stderr)
                     sys.exit(1)
