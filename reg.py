@@ -19,11 +19,13 @@ from socket import socket
 from pickle import dump, load
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QLineEdit, QLabel, QFrame,\
-    QGridLayout, QVBoxLayout, QMainWindow, QMessageBox,\
-    QDesktopWidget, QListWidget, QListWidgetItem
+    QGridLayout, QVBoxLayout, QMainWindow, QMessageBox, QDesktopWidget,\
+    QListWidget, QListWidgetItem
 from search import Search
 from threading import Thread
+from safequeue import SafeQueue
 
 #-----------------------------------------------------------------------
 
@@ -71,20 +73,31 @@ def __show_gui(arg, host, port):
     screen_size = QDesktopWidget().screenGeometry()
     window.resize(screen_size.width()//2, screen_size.height()//2)
 
+    # Create widgets
+
     dept = QLineEdit()
     num = QLineEdit()
     area = QLineEdit()
     title = QLineEdit()
 
-    
-    
-    #     author = author_lineedit.text()
-    #     if worker_thread is not None:
-    #         worker_thread.stop()
-    #     worker_thread = WorkerThread(host, port, author, queue)
-    #     worker_thread.start()
+    list_widget = QListWidget()
+
+    # Set event listeners
+
+    # Create a queue and a timer that polls it.
+
+    queue = SafeQueue()
+
+    def poll_queue():
+        poll_queue_helper(queue, window, list_widget)
+
+    timer = QTimer()
+    timer.timeout.connect(poll_queue)
+    timer.setInterval(100) # milliseconds
+    timer.start()
 
     worker_thread = None
+
     def __initiate_search_query():
         nonlocal worker_thread
 
@@ -94,58 +107,50 @@ def __show_gui(arg, host, port):
         title_text = title.text()
 
         try:
-
             if worker_thread is not None:
                 worker_thread.stop()
-            worker_thread = WorkerThread(host, port, search, queue)
+            worker_thread = WorkerThread(host, port, Search(dept_text,\
+                num_text, area_text, title_text), queue)
             worker_thread.start()
-
         except Exception as ex:
             QMessageBox.critical(window, 'Server Error', str(ex))
             return
-
-        if classes_response[0]:
-            __create_output(classes_response[1], host,\
-                port, window, list_widget)
-        else:
-            QMessageBox.critical(window, 'Error',
-                str(classes_response[1]))
 
     dept.textChanged.connect(__initiate_search_query)
     num.textChanged.connect(__initiate_search_query)
     area.textChanged.connect(__initiate_search_query)
     title.textChanged.connect(__initiate_search_query)
 
-    layout = QVBoxLayout()
-
-    layout.setSpacing(0)
-    layout.setContentsMargins(0, 0, 0, 0)
-    layout.addWidget(__create_inputs(dept, num, area, title))
-
-    list_widget = QListWidget()
-    layout.addWidget(list_widget)
-
     def __initiate_class_details_query():
         selected_item = list_widget.selectedItems()[0]
         class_id = selected_item.data(QtCore.Qt.UserRole)
 
         try:
-            class_details_response =\
+            successful, data =\
                 __query_server_for_class_details(host, port, class_id)
         except Exception as ex:
             QMessageBox.critical(window, 'Server Error', str(ex))
             return
 
-        if class_details_response[0]:
+        if successful:
             QMessageBox.information(window, 'Class Details',\
-                str(class_details_response[1]))
+                str(data))
         else:
             QMessageBox.critical(window,\
-                'Error', str(class_details_response[1]))
+                'Error', str(data))
     
     list_widget.itemActivated.connect(__initiate_class_details_query)
 
+    # Set layout and frame
     frame = QFrame()
+
+    layout = QVBoxLayout()
+
+    layout.setSpacing(0)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.addWidget(__create_inputs(dept, num, area, title))
+    layout.addWidget(list_widget)
+
     frame.setLayout(layout)
     window.setCentralWidget(frame)
 
@@ -189,7 +194,7 @@ def __create_label(text):
 
 #-----------------------------------------------------------------------
 
-def __create_output(classes, host, port, window, list_widget):
+def __create_output(classes, list_widget):
 
     list_widget.clear()
 
@@ -209,77 +214,6 @@ def __create_output(classes, host, port, window, list_widget):
         list_widget.insertItem(i, item)
 
     list_widget.item(0).setSelected(True)
-
-#-----------------------------------------------------------------------
-
-class WorkerThread (Thread):
-
-    def __init__(self, host, port, search, queue):
-        Thread.__init__(self)
-        self._host = host
-        self._port = port
-        self._search = search
-        self._queue = queue
-        self._should_stop = False
-
-    def stop(self):
-        self._should_stop = True
-
-    def run(self):
-        try:
-            classes_response = __query_server_for_search(self._host, self._port, self._search)
-
-            if not self._should_stop:
-                self._queue.put((True, classes_response))
-        except Exception as ex:
-            if not self._should_stop:
-                self._queue.put((False, ex))
-
-#-----------------------------------------------------------------------
-
-def poll_queue_helper(queue, books_textedit):
-
-    item = queue.get()
-    while item is not None:
-        books_textedit.clear()
-        successful, data = item
-        if successful:
-            books = data
-            if len(books) == 0:
-                books_textedit.insertPlainText('(None)')
-            else:
-                pattern = '<strong>%s</strong>: %s ($%.2f)<br>'
-                for book in books:
-                    books_textedit.insertHtml(pattern % book.to_tuple())
-        else:
-            ex = data
-            books_textedit.insertPlainText(str(ex))
-        books_textedit.repaint()
-        item = queue.get()
-
-#-----------------------------------------------------------------------
-
-def __query_server_for_search(host, port, search):
-    with socket() as sock:
-        sock.connect((host, port))
-
-        write_flo = sock.makefile(mode='wb')
-        dump(True, write_flo)
-        dump(search, write_flo)
-        write_flo.flush()
-        print('Sent search to server')
-
-        read_flo = sock.makefile(mode='rb')
-        query_successful = load(read_flo)
-
-        if query_successful:
-            classes = load(read_flo)
-            print('Received classes from the server')
-            return (True, classes)
-
-        print('Received details from the server')
-        ex_message = load(read_flo)
-        return (False, ex_message)
 
 #-----------------------------------------------------------------------
 
@@ -306,6 +240,72 @@ def __query_server_for_class_details(host, port, class_id):
         print('Received exception message from server')
         ex_message = load(read_flo)
         return (False, ex_message)
+
+#-----------------------------------------------------------------------
+
+class WorkerThread (Thread):
+
+    def __init__(self, host, port, search, queue):
+        Thread.__init__(self)
+        self._host = host
+        self._port = port
+        self._search = search
+        self._queue = queue
+        self._should_stop = False
+
+    def stop(self):
+        self._should_stop = True       
+
+    def run(self):
+        try:
+            with socket() as sock:
+                sock.connect((self._host, self._port))
+
+                write_flo = sock.makefile(mode='wb')
+                dump(True, write_flo)
+                dump(self._search, write_flo)
+                write_flo.flush()
+                print('Sent search to server')
+
+                read_flo = sock.makefile(mode='rb')
+                query_successful = load(read_flo)
+                data = load(read_flo)
+
+                if query_successful:
+                    print('Received classes from the server')
+                else:
+                    print('Received exception from the server')
+
+            if not self._should_stop:
+                self._queue.put((True, (query_successful, data)))
+        except Exception as ex:
+            if not self._should_stop:
+                print('this happened: ' + str(ex))
+                self._queue.put((False, ex))
+
+#-----------------------------------------------------------------------
+
+def poll_queue_helper(queue, window, list_widget):
+
+    classes_response = queue.get()
+
+    while classes_response is not None:
+        successful, data = classes_response
+
+        if successful:
+            query_successful, query_data = data
+            
+            if query_successful:
+                __create_output(query_data, list_widget)
+            else:
+                QMessageBox.critical(window, 'Error',
+                    str(query_data))
+        else:
+            #TODO: what should happen if the queue should stop??
+            QMessageBox.critical(window, 'Error',
+                    str(data))
+
+        classes_response = queue.get()
 
 #-----------------------------------------------------------------------
 
