@@ -106,7 +106,8 @@ def __show_gui(arg, host, port):
 
     list_widget.itemActivated.connect(__initiate_class_details_query)
 
-    __set_up_layout(window, dept, num, area, title, list_widget)    
+    __set_up_layout(window, [__create_inputs(dept, num, area, title),\
+        list_widget])
 
     window.show()
 
@@ -158,15 +159,16 @@ def __set_up_queue_and_timer(window, list_widget):
 
 #-----------------------------------------------------------------------
 
-def __set_up_layout(window, dept, num, area, title, list_widget):
+def __set_up_layout(window, widgets):
     frame = QFrame()
 
     layout = QVBoxLayout()
 
     layout.setSpacing(0)
     layout.setContentsMargins(0, 0, 0, 0)
-    layout.addWidget(__create_inputs(dept, num, area, title))
-    layout.addWidget(list_widget)
+
+    for widget in widgets:
+        layout.addWidget(widget)
 
     frame.setLayout(layout)
     window.setCentralWidget(frame)
