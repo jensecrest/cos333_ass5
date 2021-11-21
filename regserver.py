@@ -63,6 +63,7 @@ def handle_client(sock, delay):
         data = load(read_flo)
 
         response = None
+        write_flo = sock.makefile(mode='wb')
 
         if request_type_is_search:
             print('Received command: get_overviews')
@@ -86,15 +87,10 @@ def handle_client(sock, delay):
             # data will be the class id as a string
             response = get_class_details(data)
 
-        write_flo = sock.makefile(mode='wb')
         dump(True, write_flo) # query succeeded!
         dump(response, write_flo)
 
         write_flo.flush()
-        sock.close()
-
-        print ('Closed socket in child process')
-        print ('Exiting child process')
 
     except ValueError as ex:
         print(str(ex), file=stderr)
@@ -108,7 +104,10 @@ def handle_client(sock, delay):
             'Please contact the system administrator.', write_flo)
 
     write_flo.flush()
-    print('Wrote response to client')
+    sock.close()
+
+    print ('Closed socket in child process')
+    print ('Exiting child process')
 
 #-----------------------------------------------------------------------
 
@@ -135,10 +134,10 @@ def main():
 
         try:
             server_sock = socket()
-            print('Opened server socket')
 
             if name != 'nt':
                 server_sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            print('Opened server socket')
 
             server_sock.bind(('', port))
             print('Bound server socket to port')
@@ -155,8 +154,6 @@ def main():
                         process = Process(target=handle_client,
                             args=[sock, delay])
                         process.start()
-
-                    print('Closed socket in parent process')
 
                 except Exception as ex:
                     print(ex, file=stderr)
