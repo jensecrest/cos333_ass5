@@ -146,11 +146,11 @@ def __set_up_queue_and_timer(window, list_widget):
                     __populate_list_with_classes(query_data,\
                         list_widget)
                 else:
-                    if str(query_data) is "A server error occurred. "+\
+                    if str(query_data) == "A server error occurred. "+\
                         "Please contact the system administrator.":
                         QMessageBox.critical(window, 'Server Error',
                             str(query_data))
-                    else: 
+                    else:
                         QMessageBox.critical(window, 'Error',
                             str(query_data))
             else:
