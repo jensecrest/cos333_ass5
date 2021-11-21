@@ -319,8 +319,15 @@ def __initiate_class_details_query_helper(host, port, window,\
         QMessageBox.information(window, 'Class Details',\
             str(data))
     else:
-        QMessageBox.critical(window,\
-            'Error', str(data))
+        # QMessageBox.critical(window,\
+        #     'Error', str(data))
+        if str(data) == "A server error occurred. "+\
+            "Please contact the system administrator.":
+            QMessageBox.critical(window, 'Server Error',
+                str(data))
+        else:
+            QMessageBox.critical(window, 'Error',
+                str(data))
 
 #-----------------------------------------------------------------------
 if __name__ == '__main__':
