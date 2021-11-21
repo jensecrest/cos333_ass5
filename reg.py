@@ -93,8 +93,11 @@ def __show_gui(arg, host, port):
         search = Search(dept.text(), num.text(), area.text(),\
             title.text())
 
-        __initiate_search_query_helper(worker_thread, host, port,\
-            search, queue)
+        if worker_thread is not None:
+            worker_thread.stop()
+
+        worker_thread = WorkerThread(host, port, search, queue)
+        worker_thread.start()
 
     dept.textChanged.connect(__initiate_search_query)
     num.textChanged.connect(__initiate_search_query)
@@ -292,15 +295,6 @@ class WorkerThread (Thread):
         except Exception as ex:
             if not self._should_stop:
                 self._queue.put((False, ex))
-
-#-----------------------------------------------------------------------
-
-def __initiate_search_query_helper(worker_thread, host, port, search,\
-    queue):
-    if worker_thread is not None:
-        worker_thread.stop()
-    worker_thread = WorkerThread(host, port, search, queue)
-    worker_thread.start()
 
 #-----------------------------------------------------------------------
 
